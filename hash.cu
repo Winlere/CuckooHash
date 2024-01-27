@@ -8,7 +8,7 @@
 #include <map>
 #include "hash.cuh"
 #define MAX_MOVE_TIME 100
-#define NOT_A_KEY -1 // if change this, please change the memset value in validation() and other functions as well
+#define NOT_A_KEY -1 // if change this, please change the memset value as well.
 #define NOT_A_INDEX -1
 
 class hashTableEntry
@@ -18,37 +18,19 @@ public:
     // int value; no value is needed
 };
 
-/*The following hash function is adapted from https://github.com/easyaspi314/xxhash-clean/blob/master/xxhash32-ref.c */
-static uint32_t const PRIME32_1 = 0x9E3779B1U; /* 0b10011110001101110111100110110001 */
-static uint32_t const PRIME32_2 = 0x85EBCA77U; /* 0b10000101111010111100101001110111 */
-static uint32_t const PRIME32_3 = 0xC2B2AE3DU; /* 0b11000010101100101010111000111101 */
-static uint32_t const PRIME32_4 = 0x27D4EB2FU; /* 0b00100111110101001110101100101111 */
-static uint32_t const PRIME32_5 = 0x165667B1U; /* 0b00010110010101100110011110110001 */
-
-class HashFunc
+int initHashTable(hashTableEntry **d_table, int tableSize)
 {
-public:
-    int seed;
-    int tableSize;
-    /*https://github.com/easyaspi314/xxhash-clean/blob/86a04ab3f01277049a23f6c9e2c4a6c174ff50c4/xxhash32-ref.c#L97 */
-    __host__ __device__ int operator()(int key)
-    {
-        uint32_t ret = PRIME32_5 + seed;
-        uint8_t const *p = reinterpret_cast<uint8_t const *>(&key);
-        for (int i = 0; i < 4; ++i)
-        {
-            ret += (*p++) * PRIME32_3;
-            ret = (ret << 17) | (ret >> 15);
-            ret *= PRIME32_4;
-        }
-        ret ^= ret >> 15;
-        ret *= PRIME32_2;
-        ret ^= ret >> 13;
-        ret *= PRIME32_3;
-        ret ^= ret >> 16;
-        return ret % tableSize;
-    };
-};
+    cudaMalloc(d_table, sizeof(hashTableEntry) * tableSize);
+    cudaMemset(*d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+    return 0;
+}
+
+int reuseHashTable(hashTableEntry **d_table, int tableSize){
+    cudaMemset(d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+    return 0;
+}
+
+
 
 __device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval)
 {
@@ -128,11 +110,11 @@ bool validation(int tableSize_, int test_)
               << "tableSize=" << tableSize_ << " test=" << test_ << std::endl;
     std::mt19937_64 rng(123);
     std::uniform_int_distribution<int> dist(0, 1e9);
-    int tableSize = tableSize_;
-    int test = test_;
+    uint32_t tableSize = tableSize_;
+    uint32_t test = test_;
     std::vector<int> keys;
     std::unordered_set<int> keySet;
-    for (int i = 0; i < test; ++i)
+    for (uint32_t i = 0; i < test; ++i)
     {
         int key = dist(rng);
         if (keySet.find(key) == keySet.end())
@@ -147,7 +129,7 @@ bool validation(int tableSize_, int test_)
     int retries = MAX_RETRY;
     HashFunc f1, f2;
     std::map<std::pair<int, int>, int> dup;
-    int a1, a2;
+    uint32_t a1, a2;
 retry:
     cudaMemset(d_table, 0xff, sizeof(hashTableEntry) * tableSize);
     a1 = dist(rng), a2 = dist(rng);
@@ -241,7 +223,7 @@ retry:
     }
     std::cout << "[Sanity Check] passed lookup test. no false negative" << std::endl;
     // lookup test
-    for (int i = 0; i < test; ++i)
+    for (uint32_t i = 0; i < test; ++i)
     {
         int key;
         do
@@ -270,4 +252,13 @@ retry:
     // release resource
     cudaFree(d_table);
     return true;
+}
+
+__global__ void generateRandomKeys(int *&d_keys, int batchSize, int range)
+{
+    uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= batchSize)
+        return;
+    HashFunc f{tid,(uint32_t)range};
+    d_keys[tid] = f(tid);
 }
