@@ -32,5 +32,7 @@ int main()
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
         std::cout << "testsize,elapsed_μs,valid | " << testSize << "," << elapsed_μs << "," << valid << std::endl;
     }
+    cudaFree(d_keys);
+    cudaFree(d_retvals);
     return 0;
 }
