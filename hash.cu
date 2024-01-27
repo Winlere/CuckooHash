@@ -44,29 +44,38 @@ struct HashFunc{
 };
 
 
-__global__ void insertItem(hashTableEntry* d_table, int key, HashFunc f1,HashFunc f2,int* retval){
+__global__ void insertItem(hashTableEntry* d_table, int original_key, HashFunc f1, HashFunc f2, int* retval){
     *retval = 0;
     int move_time = 0;
-    int tmpBannedSlot = -1;
-    do{
-        int h1 = f1(key);
-        int h2 = f2(key);
-        if(d_table[h1].key == key || d_table[h2].key == key) return;
-        //try to place key in the slot
-        if(tmpBannedSlot != 1 && d_table[h1].key == NOT_A_KEY && atomicCAS(&d_table[h1].key,NOT_A_KEY,key) == NOT_A_KEY)
+    int h1 = f1(original_key);
+    int h2 = f2(original_key);
+    int evicteeIndex = h1;
+    if(d_table[h1].key == original_key || d_table[h2].key == original_key)
+        return; // Duplicate key
+    // Try to place original_key in the slot
+    int current_key = original_key;
+    int k1 = atomicExch(&d_table[h1].key, current_key);
+    if(k1 == NOT_A_KEY) 
+        return;
+
+    current_key = k1; // Now we work with the evicted key
+
+    do{ // This block tries to place 'current_key' in the alternative slot
+        h1 = f1(current_key);
+        h2 = f2(current_key);
+        int alternativeIndex = evicteeIndex == h1 ? h2 : h1;
+        k1 = atomicExch(&d_table[alternativeIndex].key, current_key);
+        if(k1 == NOT_A_KEY)
             return;
-        if(tmpBannedSlot != 2 && d_table[h2].key == NOT_A_KEY && atomicCAS(&d_table[h2].key,NOT_A_KEY,key) == NOT_A_KEY)
-            return;
-        //if there is no available slot. evict k1 in the h1
-        int k1 = atomicExch(&d_table[h1].key,key);
-        //set a lock to prevent self-looping
-        tmpBannedSlot = 1 + (f2(k1) == h1);
-        //start over
-        key = k1;
+
+        current_key = k1; // Update the current_key with the newly evicted key
+        evicteeIndex = alternativeIndex;
         ++move_time;
-    }while(move_time < MAX_MOVE_TIME);
-    *retval = 1;
+    } while(move_time < MAX_MOVE_TIME);
+    
+    *retval = 1; // Indicate failure after MAX_MOVE_TIME attempts
 }
+
 
 __global__ void lookupItem(hashTableEntry* d_table, int key, HashFunc f1, HashFunc f2, int* retval){
     *retval = NOT_A_INDEX;
@@ -102,18 +111,22 @@ bool validation(int tableSize_ = 1 << 25, int test_  = 1 << 19){
     cudaMalloc(&d_table,sizeof(hashTableEntry) * tableSize);
     const int MAX_RETRY = 30;
     int retries = MAX_RETRY;
+    HashFunc f1,f2;
+    std::map<std::pair<int,int>,int> dup;
+    int a1,a2; 
 retry:
     cudaMemset(d_table,0xff,sizeof(hashTableEntry) * tableSize);
-    int a1 = dist(rng), a2 = dist(rng);
-    HashFunc f1{a1,tableSize},f2{a2,tableSize};
-    std::map<std::pair<int,int>,int> dup; 
+    a1 = dist(rng), a2 = dist(rng);
+    f1 = HashFunc{a1,tableSize};
+    f2 = HashFunc{a2,tableSize};
+    dup.clear();
     for(int key:keys){
         int h1 = f1(key);
         int h2 = f2(key);
         dup[{h1,h2}]++;
         // std:: cout << key << " " << h1 << " " << h2 << std::endl;
         if(dup[{h1,h2}] == 3){
-            std::cout << "[Sanity Check] inherent collision detected. h1 = " << h1 << " h2 = " << h2 <<  std::endl;
+            // LOG_DEBUG(("inherent collision detected. h1 = %d h2 = %d",h1,h2));
             for(auto key2 : keys){
                 int h1_ = f1(key2); // hash(key2,a1,b1,tableSize);
                 int h2_ = f2(key2); // hash(key2,a2,b2,tableSize);
@@ -165,6 +178,10 @@ retry:
         cudaFree(d_retval);
         if(retval == NOT_A_INDEX){
             std::cout << "[Sanity Check] lookup failed (false negative)" << std::endl;
+            std::cout << "[Sanity Check] key = " << key << std::endl;
+            std::cout << "[Sanity Check] h1 = " << f1(key) << std::endl;
+            std::cout << "[Sanity Check] h2 = " << f2(key) << std::endl;
+            std::cout << "[Sanity Check] retval = " << retval << std::endl;
             cudaFree(d_table);
             return false;
         }
