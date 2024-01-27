@@ -44,7 +44,7 @@ struct HashFunc{
 };
 
 
-__global__ void insertItem(hashTableEntry* d_table, int original_key, HashFunc f1, HashFunc f2, int* retval){
+__device__ inline void insertItem(hashTableEntry* d_table, int original_key, HashFunc f1, HashFunc f2, int* retval){
     *retval = 0;
     int move_time = 0;
     int h1 = f1(original_key);
@@ -77,7 +77,7 @@ __global__ void insertItem(hashTableEntry* d_table, int original_key, HashFunc f
 }
 
 
-__global__ void lookupItem(hashTableEntry* d_table, int key, HashFunc f1, HashFunc f2, int* retval){
+__device__ inline void lookupItem(hashTableEntry* d_table, int key, HashFunc f1, HashFunc f2, int* retval){
     *retval = NOT_A_INDEX;
     int h1 = f1(key);
     if(d_table[h1].key == key){
@@ -91,6 +91,25 @@ __global__ void lookupItem(hashTableEntry* d_table, int key, HashFunc f1, HashFu
     }
     *retval = NOT_A_INDEX;
 }
+
+__global__ void insertItemBatch(hashTableEntry* d_table, int* d_keys, int* d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2){
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if(tid >= batchSize)
+        return;
+    int key = d_keys[tid];
+    int* retval = d_retvals + tid;
+    insertItem(d_table,key,f1,f2,retval);
+}
+
+__global__ void lookupItemBatch(hashTableEntry* d_table, int* d_keys, int* d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2){
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if(tid >= batchSize)
+        return;
+    int key = d_keys[tid];
+    int* retval = d_retvals + tid;
+    lookupItem(d_table,key,f1,f2,retval);
+}
+
 
 bool validation(int tableSize_ = 1 << 25, int test_  = 1 << 19){
     std::cout << "[Sanity Check] start sanity check" << "tableSize=" << tableSize_ << " test=" << test_ << std::endl;
@@ -147,8 +166,11 @@ retry:
     //insert test
     for(int key : keys){
         int* d_retval;
+        int* d_key;
+        cudaMalloc(&d_key,sizeof(int));
+        cudaMemcpy(d_key,&key,sizeof(int),cudaMemcpyHostToDevice);
         cudaMalloc(&d_retval,sizeof(int));
-        insertItem<<<1,1>>>(d_table,key,f1,f2,d_retval);
+        insertItemBatch<<<1,1>>>(d_table,d_key,d_retval,tableSize,1,f1,f2);
         cudaDeviceSynchronize();
         int retval;
         cudaMemcpy(&retval,d_retval,sizeof(int),cudaMemcpyDeviceToHost);
@@ -170,8 +192,11 @@ retry:
     //lookup test
     for(int key : keys){
         int* d_retval;
+        int* d_key;
+        cudaMalloc(&d_key,sizeof(int));
+        cudaMemcpy(d_key,&key,sizeof(int),cudaMemcpyHostToDevice);
         cudaMalloc(&d_retval,sizeof(int));
-        lookupItem<<<1,1>>>(d_table,key,f1,f2,d_retval);
+        lookupItemBatch<<<1,1>>>(d_table,d_key,d_retval,tableSize,1,f1,f2);
         cudaDeviceSynchronize();
         int retval;
         cudaMemcpy(&retval,d_retval,sizeof(int),cudaMemcpyDeviceToHost);
@@ -194,8 +219,11 @@ retry:
             key = dist(rng);
         }while(keySet.find(key) != keySet.end());
         int* d_retval;
+        int* d_key;
+        cudaMalloc(&d_key,sizeof(int));
+        cudaMemcpy(d_key,&key,sizeof(int),cudaMemcpyHostToDevice);
         cudaMalloc(&d_retval,sizeof(int));
-        lookupItem<<<1,1>>>(d_table,key,f1,f2,d_retval);
+        lookupItemBatch<<<1,1>>>(d_table,d_key,d_retval,tableSize,1,f1,f2);
         cudaDeviceSynchronize();
         int retval;
         cudaMemcpy(&retval,d_retval,sizeof(int),cudaMemcpyDeviceToHost);
