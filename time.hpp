@@ -5,7 +5,7 @@
 #define TIME_INIT \
     auto start = std::chrono::high_resolution_clock::now(); \
     auto end = std::chrono::high_resolution_clock::now(); \
-    int64_t elapsed_ms = 0;
+    int64_t elapsed_μs = 0;
 
 // Record the start time
 #define TIME_START \
@@ -14,4 +14,4 @@
 // Record the end time, calculate elapsed time in milliseconds
 #define TIME_END                                           \
     end = std::chrono::high_resolution_clock::now();       \
-    elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    elapsed_μs = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();

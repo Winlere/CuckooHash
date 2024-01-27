@@ -24,12 +24,13 @@ int main()
     {
         int testSize = 1 << s;
         HashFunc f1{seed1 * s, tableSize}, f2{seed2 * s, tableSize};
+        reuseHashTable(&d_hashTable, tableSize);
         TIME_START;
         insertItemBatch<<<(testSize + 255) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2);
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
-        std::cout << "testsize,elapsed_ms,valid | " << testSize << " " << elapsed_ms << " " << valid << std::endl;
+        std::cout << "testsize,elapsed_μs,valid | " << testSize << "," << elapsed_μs << "," << valid << std::endl;
     }
     return 0;
 }
