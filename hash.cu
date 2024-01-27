@@ -254,7 +254,7 @@ retry:
     return true;
 }
 
-__global__ void generateRandomKeys(int *&d_keys, int batchSize, int range)
+__global__ void generateRandomKeys(int *d_keys, int batchSize, int range)
 {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= batchSize)

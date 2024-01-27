@@ -34,7 +34,7 @@ public:
 };
 int initHashTable(hashTableEntry ** d_table, int tableSize);
 int reuseHashTable(hashTableEntry ** d_table, int tableSize);
-__global__ void generateRandomKeys(int *&d_keys, int batchSize, int range);
+__global__ void generateRandomKeys(int *d_keys, int batchSize, int range);
 __device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval);
 __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1, HashFunc f2, int *retval);
 __global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2);
