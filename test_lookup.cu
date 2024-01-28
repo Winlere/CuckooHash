@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <omp.h>
+#include <random>
 
 int main()
 {
@@ -49,39 +50,42 @@ int main()
     // prepare randomkeys
     int *d_queries = nullptr;
     cudaMalloc((void **)&d_queries, sizeof(int) * testMaxSize);
-    
     std::vector<int> h_newRandomKeys(testMaxSize);
-    #pragma omp parallel for
-    for (int i = 0; i < testMaxSize; ++i)
+#pragma omp parallel for shared(testMaxSize, range, h_newRandomKeys) firstprivate(oldKeysSet) schedule(dynamic)
+    for (uint32_t i = 0; i < testMaxSize; ++i)
     {
-        
+        std::mt19937 rng(i);
+        std::uniform_int_distribution<int> uni(0, range);
+        int key = uni(rng);
         while (oldKeysSet.find(key) != oldKeysSet.end())
         {
-            key = rand() % range;
+            key = uni(rng);
         }
         h_newRandomKeys[i] = key;
     }
-    
-    
     int *d_newRandomKeys = nullptr;
     cudaMalloc((void **)&d_newRandomKeys, sizeof(int) * testMaxSize);
-    
-    
+    cudaMemcpy(d_newRandomKeys, h_newRandomKeys.data(), sizeof(int) * testMaxSize, cudaMemcpyHostToDevice);
     for (int i = 0; i <= 10; ++i)
     {
         int existingTestSize = testMaxSize * i / 10;
         int randomTestSize = testMaxSize - existingTestSize;
         // copy the existing keys to the new keys
-        cudaMemcpy(d_newRandomKeys, d_keys, sizeof(int) * existingTestSize, cudaMemcpyDeviceToDevice);
-        // copy the random keys to the new keys
-        cudaMemcpy(d_newRandomKeys + existingTestSize, d_queries + existingTestSize, sizeof(int) * randomTestSize, cudaMemcpyDeviceToDevice);
+        cudaMemcpy(d_queries, d_keys, sizeof(int) * existingTestSize, cudaMemcpyDeviceToDevice);
+        cudaMemcpy(d_queries + existingTestSize, d_newRandomKeys, sizeof(int) * randomTestSize, cudaMemcpyDeviceToDevice);
         // do lookups
-        lookupItemBatch<<<(testMaxSize + 255) / 256, 256>>>(d_hashTable, d_newRandomKeys, d_retvals, tableSize, testMaxSize, f1, f2);
+        TIME_START;
+        lookupItemBatch<<<(testMaxSize + 255) / 256, 256>>>(d_hashTable, d_queries, d_retvals, tableSize, testMaxSize, f1, f2);
+        cudaDeviceSynchronize();
+        TIME_END;
         // validate the return values
-
+        bool valid = isArrayAllNotEqualToValue(d_retvals, existingTestSize, NOT_A_INDEX) && isArrayAllEqualToValue(d_retvals + existingTestSize, randomTestSize, NOT_A_INDEX);
+        std::cout << "percentage,elapsed_μs,valid | " << i << ',' << elapsed_μs << "," << valid << std::endl;
     }
-    
+
     cudaFree(d_keys);
     cudaFree(d_retvals);
+    cudaFree(d_queries);
+    cudaFree(d_newRandomKeys);
     return 0;
 }
