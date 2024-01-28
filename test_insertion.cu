@@ -20,14 +20,6 @@ int main()
     cudaMemset(d_keys, 0xff, sizeof(int) * tableSize);
     generateRandomKeys<<<(testMaxSize + 255) / 256, 256>>>(d_keys, tableSize, range);
     cudaDeviceSynchronize();
-    //copy keys to host
-    std::vector<int> h_keys(tableSize);
-    cudaMemcpy(h_keys.data(), d_keys, sizeof(int) * tableSize, cudaMemcpyDeviceToHost);
-    //print some
-    for (int i = 0; i < 10; ++i)
-    {
-        std::cout << h_keys[i] << " ";
-    }
 
     int *d_retvals = nullptr;
     cudaMalloc((void **)&d_retvals, sizeof(int) * testMaxSize);
