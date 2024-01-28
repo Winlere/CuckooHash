@@ -29,6 +29,10 @@ all: $(EXECUTABLES)
 $(EXECUTABLES): % : %.o $(OTHER_CU_FILES:.cu=.o)
 	$(NVCC) $(NVCCFLAGS) $^ -o $@
 
+# helper files
+
+$(OBJECTS): helper.cuh
+
 # Clean up
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLES)
