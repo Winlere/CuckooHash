@@ -67,5 +67,5 @@ bool isArrayAllNotEqualToValue(const T* d_arr, T value, int size) {
     // Free device memory
     cudaFree(d_result);
 
-    return !host_result;
+    return host_result;
 }
