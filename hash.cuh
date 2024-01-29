@@ -18,13 +18,13 @@ public:
     /*https://github.com/easyaspi314/xxhash-clean/blob/86a04ab3f01277049a23f6c9e2c4a6c174ff50c4/xxhash32-ref.c#L97 */
     __host__ __device__ int operator()(int key)
     {
-        uint32_t ret = PRIME32_5 + seed;
+        uint32_t ret = PRIME32_5 + seed + 4;
         uint8_t const *p = reinterpret_cast<uint8_t const *>(&key);
         for (int i = 0; i < 4; ++i)
         {
-            ret += (*p++) * PRIME32_3;
-            ret = (ret << 17) | (ret >> 15);
-            ret *= PRIME32_4;
+            ret += (*p++) * PRIME32_5;
+            ret = (ret << 11) | (ret >> (32 - 11));
+            ret *= PRIME32_1;
         }
         ret ^= ret >> 15;
         ret *= PRIME32_2;
@@ -35,7 +35,7 @@ public:
     };
 };
 int initHashTable(hashTableEntry ** d_table, int tableSize);
-int reuseHashTable(hashTableEntry ** d_table, int tableSize);
+int reuseHashTable(hashTableEntry * d_table, int tableSize);
 __global__ void generateRandomKeys(int *d_keys, int batchSize, int range, uint32_t seed = 114514);
 __device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval);
 __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1, HashFunc f2, int *retval);

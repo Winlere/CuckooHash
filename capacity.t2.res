@@ -1,0 +1,13 @@
+tableSize,elapsed_μs,valid | 18454937,149746,0
+tableSize,elapsed_μs,valid | 20132659,120396,0
+tableSize,elapsed_μs,valid | 21810380,97882,0
+tableSize,elapsed_μs,valid | 23488102,79790,0
+tableSize,elapsed_μs,valid | 25165824,65295,0
+tableSize,elapsed_μs,valid | 26843545,53412,0
+tableSize,elapsed_μs,valid | 28521267,43221,0
+tableSize,elapsed_μs,valid | 30198988,34530,0
+tableSize,elapsed_μs,valid | 31876710,26478,0
+tableSize,elapsed_μs,valid | 33554432,22063,0
+tableSize,elapsed_μs,valid | 16944988,171994,0
+tableSize,elapsed_μs,valid | 17112760,169033,0
+tableSize,elapsed_μs,valid | 17616076,160069,0

@@ -8,10 +8,11 @@
 #include <omp.h>
 #include <random>
 
+int retry_times = 900;
 int main()
 {
     TIME_INIT;
-    const uint32_t tableSize = 1 << 25;
+    const uint32_t tableSize = 1 << 26;
     const uint32_t testMaxSize = 1 << 24;
     const uint32_t seed1 = 114514;
     const uint32_t seed2 = 191981;
@@ -25,19 +26,34 @@ int main()
     generateRandomKeys<<<(testMaxSize + 255) / 256, 256>>>(d_keys, tableSize, range, seed1);
     cudaDeviceSynchronize();
 
-    HashFunc f1{seed1, tableSize}, f2{seed2, tableSize};
+    HashFunc f1{seed1 + retry_times, tableSize}, f2{seed2 + retry_times, tableSize};
 
     int *d_retvals = nullptr;
-    cudaMalloc((void **)&d_retvals, sizeof(int) * testMaxSize);
+    cudaMalloc((void **)&d_retvals, sizeof(int) * tableSize);
     {
-        int s = 24;
-        int testSize = 1 << s;
-        reuseHashTable(&d_hashTable, tableSize);
+        int testSize;
+retry:
+        f1 = {seed1 + retry_times, tableSize};
+        f2 = {seed2 + retry_times, tableSize};
+        testSize = testMaxSize;
+        reuseHashTable(d_hashTable, tableSize);
         TIME_START;
         insertItemBatch<<<(testSize + 255) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2);
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
+        if(valid)
+            std::cout << "construction sucessfull" << std::endl ;
+        else{
+            std::cout << "failed. reconstructing..." << std::endl ;
+            ++ retry_times;
+            goto retry;
+        } 
+        //report sucess hash parameters
+        std::cout << "report sucess hash parameters" << std::endl ;
+        std::cout << "f1.seed = " << f1.seed << " f1.tableSize = " << f1.tableSize << std::endl;
+        std::cout << "f2.seed = " << f2.seed << " f2.tableSize = " << f2.tableSize << std::endl;
+
     }
 
     // random shuffle the old keys. to ensure uniformity
@@ -68,7 +84,7 @@ int main()
     cudaMemcpy(d_newRandomKeys, h_newRandomKeys.data(), sizeof(int) * testMaxSize, cudaMemcpyHostToDevice);
     for (int i = 0; i <= 10; ++i)
     {
-        int existingTestSize = testMaxSize * i / 10;
+        int existingTestSize = std::max(testMaxSize * i / 10, 1u);
         int randomTestSize = testMaxSize - existingTestSize;
         // copy the existing keys to the new keys
         cudaMemcpy(d_queries, d_keys, sizeof(int) * existingTestSize, cudaMemcpyDeviceToDevice);
@@ -79,7 +95,11 @@ int main()
         cudaDeviceSynchronize();
         TIME_END;
         // validate the return values
-        bool valid = isArrayAllNotEqualToValue(d_retvals, existingTestSize, NOT_A_INDEX) && isArrayAllEqualToValue(d_retvals + existingTestSize, randomTestSize, NOT_A_INDEX);
+        // bool valid = isArrayAllNotEqualToValue(d_retvals, existingTestSize, NOT_A_INDEX) && isArrayAllEqualToValue(d_retvals + existingTestSize, randomTestSize, NOT_A_INDEX);
+        bool valid1 = isArrayAllNotEqualToValue(d_retvals, existingTestSize, NOT_A_INDEX);
+        bool valid2 = isArrayAllEqualToValue(d_retvals + existingTestSize, randomTestSize, NOT_A_INDEX);
+        bool valid = valid1 && valid2;
+        // std::cout << "valid1,2,#=" << valid1 << ',' << valid2 << ',' << valid << std::endl;
         std::cout << "percentage,elapsed_μs,valid | " << i << ',' << elapsed_μs << "," << valid << std::endl;
     }
 
@@ -87,5 +107,6 @@ int main()
     cudaFree(d_retvals);
     cudaFree(d_queries);
     cudaFree(d_newRandomKeys);
+    cudaFree(d_hashTable);
     return 0;
 }

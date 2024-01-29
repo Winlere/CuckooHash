@@ -1,0 +1,14 @@
+testsize,elapsed_μs,valid | 2048,331,1
+testsize,elapsed_μs,valid | 4096,348,1
+testsize,elapsed_μs,valid | 8192,357,1
+testsize,elapsed_μs,valid | 16384,359,1
+testsize,elapsed_μs,valid | 32768,497,1
+testsize,elapsed_μs,valid | 65536,1085,1
+testsize,elapsed_μs,valid | 131072,2121,1
+testsize,elapsed_μs,valid | 262144,4297,1
+testsize,elapsed_μs,valid | 524288,8810,1
+testsize,elapsed_μs,valid | 1048576,19411,1
+testsize,elapsed_μs,valid | 2097152,32299,1
+testsize,elapsed_μs,valid | 4194304,67848,1
+testsize,elapsed_μs,valid | 8388608,152106,1
+testsize,elapsed_μs,valid | 16777216,999999999,1

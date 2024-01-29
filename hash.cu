@@ -7,7 +7,7 @@
 #include <cstring>
 #include <map>
 #include "hash.cuh"
-#define MAX_MOVE_TIME 100
+#define MAX_MOVE_TIME 125
 #define NOT_A_KEY -1 // if change this, please change the memset value as well.
 #define NOT_A_INDEX -1
 
@@ -20,19 +20,33 @@ public:
 
 int initHashTable(hashTableEntry **d_table, int tableSize)
 {
-    cudaMalloc(d_table, sizeof(hashTableEntry) * tableSize);
-    cudaMemset(*d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+    auto err = cudaMalloc(d_table, sizeof(hashTableEntry) * tableSize);
+    if (err != cudaSuccess)
+    {
+        std::cerr << "cudaMalloc failed with error code " << err << std::endl;
+        return 1;
+    }
+    err = cudaMemset(*d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+    if (err != cudaSuccess)
+    {
+        std::cerr << "cudaMalloc failed with error code " << err << std::endl;
+        return 1;
+    }
     return 0;
 }
 
-int reuseHashTable(hashTableEntry **d_table, int tableSize){
-    cudaMemset(d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+int reuseHashTable(hashTableEntry *d_table, int tableSize)
+{
+    auto err = cudaMemset(d_table, 0xff, sizeof(hashTableEntry) * tableSize);
+    if (err != cudaSuccess)
+    {
+        std::cerr << "cudaMalloc failed with error code " << err << std::endl;
+        return 1;
+    }
     return 0;
 }
 
-
-
-__device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval)
+__device__ void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval)
 {
     *retval = 0;
     int move_time = 0;
@@ -44,7 +58,7 @@ __device__ inline void insertItem(hashTableEntry *d_table, int original_key, Has
     // Try to place original_key in the slot
     int current_key = original_key;
     int k1 = atomicExch(&d_table[h1].key, current_key);
-    if (k1 == NOT_A_KEY)
+    if (k1 == NOT_A_KEY || k1 == current_key)
         return;
 
     current_key = k1; // Now we work with the evicted key
@@ -55,7 +69,7 @@ __device__ inline void insertItem(hashTableEntry *d_table, int original_key, Has
         h2 = f2(current_key);
         int alternativeIndex = evicteeIndex == h1 ? h2 : h1;
         k1 = atomicExch(&d_table[alternativeIndex].key, current_key);
-        if (k1 == NOT_A_KEY)
+        if (k1 == NOT_A_KEY || k1 == current_key)
             return;
 
         current_key = k1; // Update the current_key with the newly evicted key
@@ -86,12 +100,13 @@ __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1,
 
 __global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2)
 {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= batchSize)
-        return;
-    int key = d_keys[tid];
-    int *retval = d_retvals + tid;
-    insertItem(d_table, key, f1, f2, retval);
+    long long tid = 1ll * blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < batchSize){
+        int key = d_keys[tid];
+        int tmp = -244;
+        insertItem(d_table, key, f1, f2, &tmp);
+        d_retvals[tid] = tmp;
+    }
 }
 
 __global__ void lookupItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2)
@@ -100,8 +115,9 @@ __global__ void lookupItemBatch(hashTableEntry *d_table, int *d_keys, int *d_ret
     if (tid >= batchSize)
         return;
     int key = d_keys[tid];
-    int *retval = d_retvals + tid;
-    lookupItem(d_table, key, f1, f2, retval);
+    int tmp = -233;
+    lookupItem(d_table, key, f1, f2, &tmp);
+    d_retvals[tid] = tmp;
 }
 
 bool validation(int tableSize_, int test_)
@@ -259,6 +275,6 @@ __global__ void generateRandomKeys(int *d_keys, int batchSize, int range, uint32
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= batchSize)
         return;
-    HashFunc f{seed + tid,(uint32_t)range};
+    HashFunc f{seed + tid, (uint32_t)range};
     d_keys[tid] = f(tid);
 }
