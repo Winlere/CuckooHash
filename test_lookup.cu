@@ -6,11 +6,13 @@
 #include <unordered_set>
 #include <algorithm>
 #include <omp.h>
+#include <string>
 #include <random>
 
 int retry_times = 900;
-int main()
+int main(int argc, char const *argv[])
 {
+    int seed = argc >=2 ? std::stoi(argv[1]) : 0;
     TIME_INIT;
 #ifdef TRIHASH
     const uint32_t tableSize = 1 << 25;
@@ -18,8 +20,8 @@ int main()
     const uint32_t tableSize = 1 << 26;
 #endif
     const uint32_t testMaxSize = 1 << 24;
-    const uint32_t seed1 = 114514;
-    const uint32_t seed2 = 191981;
+    uint32_t seed1 = 114514 + seed;
+    uint32_t seed2 = 191981 + seed;
     const int range = 1 << 30;
     hashTableEntry *d_hashTable = nullptr;
     initHashTable(&d_hashTable, tableSize);
@@ -86,6 +88,8 @@ int main()
     int *d_newRandomKeys = nullptr;
     cudaMalloc((void **)&d_newRandomKeys, sizeof(int) * testMaxSize);
     cudaMemcpy(d_newRandomKeys, h_newRandomKeys.data(), sizeof(int) * testMaxSize, cudaMemcpyHostToDevice);
+    uint64_t totalμs = 0;
+    uint64_t totalops = testMaxSize * 11;
     for (int i = 0; i <= 10; ++i)
     {
         int existingTestSize = std::max(testMaxSize * i / 10, 1u);
@@ -104,9 +108,13 @@ int main()
         bool valid2 = isArrayAllEqualToValue(d_retvals + existingTestSize, randomTestSize, NOT_A_INDEX);
         bool valid = valid1 && valid2;
         // std::cout << "valid1,2,#=" << valid1 << ',' << valid2 << ',' << valid << std::endl;
-        std::cout << "percentage,elapsed_μs,valid | " << i << ',' << elapsed_μs << "," << valid << std::endl;
+        if(argc != 2)
+            std::cout << "percentage,elapsed_μs,valid | " << i << ',' << elapsed_μs << "," << valid << std::endl;
+        totalμs += elapsed_μs;
     }
-
+    if(argc == 2){
+        std::cout << totalμs/1e6 <<' ' << 1.0 * totalops / totalμs << std::endl;
+    }
     cudaFree(d_keys);
     cudaFree(d_retvals);
     cudaFree(d_queries);
