@@ -47,17 +47,19 @@ int main()
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
         if (valid)
-            std::cout << "construction sucessfull" << std::endl;
+        {
+            // std::cout << "construction sucessfull" << std::endl;
+        }
         else
         {
-            std::cout << "failed. reconstructing..." << std::endl;
+            // std::cout << "failed. reconstructing..." << std::endl;
             ++retry_times;
             goto retry;
         }
         // report sucess hash parameters
-        std::cout << "report sucess hash parameters" << std::endl;
-        std::cout << "f1.seed = " << f1.seed << " f1.tableSize = " << f1.tableSize << std::endl;
-        std::cout << "f2.seed = " << f2.seed << " f2.tableSize = " << f2.tableSize << std::endl;
+        // std::cout << "report sucess hash parameters" << std::endl;
+        // std::cout << "f1.seed = " << f1.seed << " f1.tableSize = " << f1.tableSize << std::endl;
+        // std::cout << "f2.seed = " << f2.seed << " f2.tableSize = " << f2.tableSize << std::endl;
     }
 
     // random shuffle the old keys. to ensure uniformity
@@ -71,7 +73,7 @@ int main()
     int *d_queries = nullptr;
     cudaMalloc((void **)&d_queries, sizeof(int) * testMaxSize);
     std::vector<int> h_newRandomKeys(testMaxSize);
-#pragma omp parallel for shared(testMaxSize, range, h_newRandomKeys) firstprivate(oldKeysSet) schedule(dynamic)
+#pragma omp parallel for shared(testMaxSize, range, h_newRandomKeys, oldKeysSet) schedule(dynamic)
     for (uint32_t i = 0; i < testMaxSize; ++i)
     {
         std::mt19937 rng(i);
