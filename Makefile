@@ -4,7 +4,7 @@
 NVCC = nvcc
 
 # Compiler flags
-NVCCFLAGS = -g -G -Xcompiler -Wall -Xcompiler -fopenmp
+NVCCFLAGS = -g -G -Xcompiler -Wall -Xcompiler -fopenmp -DTRIHASH
 
 # CUDA test files
 TEST_FILES = test_sanity.cu test_insertion.cu test_lookup.cu test_capacity.cu test_eviction.cu
@@ -17,6 +17,9 @@ OBJECTS = $(TEST_FILES:.cu=.o) $(OTHER_CU_FILES:.cu=.o)
 
 # Executable files
 EXECUTABLES = $(TEST_FILES:.cu=)
+
+# Defines
+DEFINES = -DTRIHASH
 
 # Default target
 all: $(EXECUTABLES)

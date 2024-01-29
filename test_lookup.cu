@@ -12,7 +12,11 @@ int retry_times = 900;
 int main()
 {
     TIME_INIT;
+#ifdef TRIHASH
+    const uint32_t tableSize = 1 << 25;
+#else
     const uint32_t tableSize = 1 << 26;
+#endif
     const uint32_t testMaxSize = 1 << 24;
     const uint32_t seed1 = 114514;
     const uint32_t seed2 = 191981;
@@ -32,7 +36,7 @@ int main()
     cudaMalloc((void **)&d_retvals, sizeof(int) * tableSize);
     {
         int testSize;
-retry:
+    retry:
         f1 = {seed1 + retry_times, tableSize};
         f2 = {seed2 + retry_times, tableSize};
         testSize = testMaxSize;
@@ -42,18 +46,18 @@ retry:
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
-        if(valid)
-            std::cout << "construction sucessfull" << std::endl ;
-        else{
-            std::cout << "failed. reconstructing..." << std::endl ;
-            ++ retry_times;
+        if (valid)
+            std::cout << "construction sucessfull" << std::endl;
+        else
+        {
+            std::cout << "failed. reconstructing..." << std::endl;
+            ++retry_times;
             goto retry;
-        } 
-        //report sucess hash parameters
-        std::cout << "report sucess hash parameters" << std::endl ;
+        }
+        // report sucess hash parameters
+        std::cout << "report sucess hash parameters" << std::endl;
         std::cout << "f1.seed = " << f1.seed << " f1.tableSize = " << f1.tableSize << std::endl;
         std::cout << "f2.seed = " << f2.seed << " f2.tableSize = " << f2.tableSize << std::endl;
-
     }
 
     // random shuffle the old keys. to ensure uniformity
@@ -91,7 +95,7 @@ retry:
         cudaMemcpy(d_queries + existingTestSize, d_newRandomKeys, sizeof(int) * randomTestSize, cudaMemcpyDeviceToDevice);
         // do lookups
         TIME_START;
-        lookupItemBatch<<<(testMaxSize + 255) / 256, 256>>>(d_hashTable, d_queries, d_retvals, tableSize, testMaxSize, f1, f2);
+        lookupItemBatch<<<(testMaxSize + 512 - 1) / 512, 512>>>(d_hashTable, d_queries, d_retvals, tableSize, testMaxSize, f1, f2);
         cudaDeviceSynchronize();
         TIME_END;
         // validate the return values
