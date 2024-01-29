@@ -3,6 +3,7 @@
 class hashTableEntry;
 #define NOT_A_KEY -1 // if change this, please change the memset value as well.
 #define NOT_A_INDEX -1
+#define MAX_MOVE_TIME 125
 
 /*The following hash function is adapted from https://github.com/easyaspi314/xxhash-clean/blob/master/xxhash32-ref.c */
 static uint32_t const PRIME32_1 = 0x9E3779B1U; /* 0b10011110001101110111100110110001 */
@@ -34,11 +35,11 @@ public:
         return ret % tableSize;
     };
 };
-int initHashTable(hashTableEntry ** d_table, int tableSize);
-int reuseHashTable(hashTableEntry * d_table, int tableSize);
+int initHashTable(hashTableEntry **d_table, int tableSize);
+int reuseHashTable(hashTableEntry *d_table, int tableSize);
 __global__ void generateRandomKeys(int *d_keys, int batchSize, int range, uint32_t seed = 114514);
-__device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval);
+__device__ inline void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval,int OVERRIDE_MAX_MOVE_TIME);
 __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1, HashFunc f2, int *retval);
-__global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2);
+__global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2,int OVERRIDE_MAX_MOVE_TIME);
 __global__ void lookupItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2);
 bool validation(int tableSize_ = 1 << 25, int test_ = 1 << 19);

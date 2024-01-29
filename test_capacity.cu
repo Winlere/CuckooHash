@@ -21,7 +21,7 @@ int main()
     cudaMemset(d_keys, 0xff, sizeof(int) * maxTableSize);
     generateRandomKeys<<<(maxTableSize + 255) / 256, 256>>>(d_keys, maxTableSize, range);
     cudaDeviceSynchronize();
-    HashFunc f1,f2;
+    HashFunc f1, f2;
 
     int *d_retvals = nullptr;
     cudaMalloc(&d_retvals, sizeof(int) * maxTableSize);
@@ -36,7 +36,7 @@ int main()
             f1 = {seed1 + retries, tableSize}, f2 = {seed2 + retries, tableSize};
             reuseHashTable(d_hashTable, tableSize);
             TIME_START;
-            insertItemBatch<<<(testSize + 256 - 1) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2);
+            insertItemBatch<<<(testSize + 256 - 1) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2, MAX_MOVE_TIME);
             cudaDeviceSynchronize();
             TIME_END;
             // // print the first 100000 values of d_retvals
@@ -53,11 +53,11 @@ int main()
             // bool valid = 1;
             cudaDeviceSynchronize();
 
-            std::cout << "tableSize,elapsed_μs,valid | " << tableSize << "," << elapsed_μs << "," << valid << std::endl;            
+            std::cout << "tableSize,elapsed_μs,valid | " << tableSize << "," << elapsed_μs << "," << valid << std::endl;
         }
-    }  
+    }
     cudaFree(d_keys);
-    cudaFree(d_retvals); 
+    cudaFree(d_retvals);
     cudaFree(d_hashTable);
-    return 0;  
+    return 0;
 }

@@ -29,13 +29,15 @@ int main()
 
     for (uint32_t s = 11; s <= 24; ++s)
     {
-        f1.seed = 115838 << 10; f1.tableSize = 4194304;
-        f2.seed = 193305 << 10; f2.tableSize = 4194304;
+        f1.seed = 115838 << 10;
+        f1.tableSize = 4194304;
+        f2.seed = 193305 << 10;
+        f2.tableSize = 4194304;
     retry_entry:
         int testSize = 1 << s;
         reuseHashTable(d_hashTable, tableSize);
         TIME_START;
-        insertItemBatch<<<(testSize + BLOCKSIZE - 1) / BLOCKSIZE, BLOCKSIZE>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2);
+        insertItemBatch<<<(testSize + BLOCKSIZE - 1) / BLOCKSIZE, BLOCKSIZE>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2, MAX_MOVE_TIME);
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);

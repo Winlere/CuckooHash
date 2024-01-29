@@ -10,7 +10,6 @@
 #define MAX_MOVE_TIME 125
 #define NOT_A_KEY -1 // if change this, please change the memset value as well.
 #define NOT_A_INDEX -1
-
 class hashTableEntry
 {
 public:
@@ -46,7 +45,7 @@ int reuseHashTable(hashTableEntry *d_table, int tableSize)
     return 0;
 }
 
-__device__ void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval)
+__device__ void insertItem(hashTableEntry *d_table, int original_key, HashFunc f1, HashFunc f2, int *retval, int OVERRIDE_MAX_MOVE_TIME)
 {
     *retval = 0;
     int move_time = 0;
@@ -121,14 +120,14 @@ __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1,
     *retval = NOT_A_INDEX;
 }
 
-__global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2)
+__global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2, int OVERRIDE_MAX_MOVE_TIME)
 {
     long long tid = 1ll * blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < batchSize)
     {
         int key = d_keys[tid];
         int tmp = -244;
-        insertItem(d_table, key, f1, f2, &tmp);
+        insertItem(d_table, key, f1, f2, &tmp, OVERRIDE_MAX_MOVE_TIME);
         d_retvals[tid] = tmp;
     }
 }
@@ -214,7 +213,7 @@ retry:
         cudaMalloc(&d_key, sizeof(int));
         cudaMemcpy(d_key, &key, sizeof(int), cudaMemcpyHostToDevice);
         cudaMalloc(&d_retval, sizeof(int));
-        insertItemBatch<<<1, 1>>>(d_table, d_key, d_retval, tableSize, 1, f1, f2);
+        insertItemBatch<<<1, 1>>>(d_table, d_key, d_retval, tableSize, 1, f1, f2, MAX_MOVE_TIME);
         cudaDeviceSynchronize();
         int retval;
         cudaMemcpy(&retval, d_retval, sizeof(int), cudaMemcpyDeviceToHost);

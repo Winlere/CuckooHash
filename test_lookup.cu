@@ -42,7 +42,7 @@ int main()
         testSize = testMaxSize;
         reuseHashTable(d_hashTable, tableSize);
         TIME_START;
-        insertItemBatch<<<(testSize + 255) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2);
+        insertItemBatch<<<(testSize + 255) / 256, 256>>>(d_hashTable, d_keys, d_retvals, tableSize, testSize, f1, f2, MAX_MOVE_TIME);
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
