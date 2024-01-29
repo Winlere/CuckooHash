@@ -1,0 +1,11 @@
+percentage,elapsed_μs,valid | 0,10564,1
+percentage,elapsed_μs,valid | 1,10414,1
+percentage,elapsed_μs,valid | 2,10256,1
+percentage,elapsed_μs,valid | 3,10094,1
+percentage,elapsed_μs,valid | 4,9949,1
+percentage,elapsed_μs,valid | 5,9778,1
+percentage,elapsed_μs,valid | 6,9625,1
+percentage,elapsed_μs,valid | 7,9460,1
+percentage,elapsed_μs,valid | 8,9284,1
+percentage,elapsed_μs,valid | 9,9138,1
+percentage,elapsed_μs,valid | 10,8984,1
