@@ -46,11 +46,9 @@ int main()
         cudaDeviceSynchronize();
         TIME_END;
         bool valid = isArrayAllEqualToValue(d_retvals, testSize, 0);
-        if (valid)
-        {
+        if (valid){
             // std::cout << "construction sucessfull" << std::endl;
-        }
-        else
+        }else
         {
             // std::cout << "failed. reconstructing..." << std::endl;
             ++retry_times;
@@ -73,7 +71,7 @@ int main()
     int *d_queries = nullptr;
     cudaMalloc((void **)&d_queries, sizeof(int) * testMaxSize);
     std::vector<int> h_newRandomKeys(testMaxSize);
-#pragma omp parallel for shared(testMaxSize, range, h_newRandomKeys, oldKeysSet) schedule(dynamic)
+#pragma omp parallel for shared(testMaxSize, range, h_newRandomKeys,oldKeysSet) schedule(dynamic)
     for (uint32_t i = 0; i < testMaxSize; ++i)
     {
         std::mt19937 rng(i);
