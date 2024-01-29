@@ -52,9 +52,18 @@ __device__ void insertItem(hashTableEntry *d_table, int original_key, HashFunc f
     int move_time = 0;
     int h1 = f1(original_key);
     int h2 = f2(original_key);
+#ifdef TRIHASH
+    HashFunc f3 = {(unsigned)f1(0), f1.tableSize};
+    int h3 = f3(original_key);
+#endif
     int evicteeIndex = h1;
+#ifndef TRIHASH
     if (d_table[h1].key == original_key || d_table[h2].key == original_key)
         return; // Duplicate key
+#else
+    if (d_table[h1].key == original_key || d_table[h2].key == original_key || d_table[h3].key == original_key)
+        return; // Duplicate key
+#endif
     // Try to place original_key in the slot
     int current_key = original_key;
     int k1 = atomicExch(&d_table[h1].key, current_key);
@@ -67,7 +76,12 @@ __device__ void insertItem(hashTableEntry *d_table, int original_key, HashFunc f
     { // This block tries to place 'current_key' in the alternative slot
         h1 = f1(current_key);
         h2 = f2(current_key);
+#ifndef TRIHASH
         int alternativeIndex = evicteeIndex == h1 ? h2 : h1;
+#else
+        int h3 = f3(current_key);
+        int alternativeIndex = evicteeIndex == h1 ? h2 : (evicteeIndex == h2 ? h3 : h1);
+#endif
         k1 = atomicExch(&d_table[alternativeIndex].key, current_key);
         if (k1 == NOT_A_KEY || k1 == current_key)
             return;
@@ -95,13 +109,23 @@ __device__ inline void lookupItem(hashTableEntry *d_table, int key, HashFunc f1,
         *retval = d_table[h2].key;
         return;
     }
+#ifdef TRIHASH
+    HashFunc f3 = {(unsigned)f1(0), f1.tableSize};
+    int h3 = f3(key);
+    if (d_table[h3].key == key)
+    {
+        *retval = d_table[h3].key;
+        return;
+    }
+#endif
     *retval = NOT_A_INDEX;
 }
 
 __global__ void insertItemBatch(hashTableEntry *d_table, int *d_keys, int *d_retvals, int tableSize, int batchSize, HashFunc f1, HashFunc f2)
 {
     long long tid = 1ll * blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < batchSize){
+    if (tid < batchSize)
+    {
         int key = d_keys[tid];
         int tmp = -244;
         insertItem(d_table, key, f1, f2, &tmp);

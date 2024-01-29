@@ -33,7 +33,6 @@ int main()
         {
             uint32_t tableSize = testMaxSize * proportion / 100;
             retries = 0;
-retry:
             f1 = {seed1 + retries, tableSize}, f2 = {seed2 + retries, tableSize};
             reuseHashTable(d_hashTable, tableSize);
             TIME_START;
