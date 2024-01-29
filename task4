@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+import os
+os.system("make -j >/dev/null 2>&1")
+# ./task4 --seed {seed} --insert {s} --repeat {time}
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed', type=int, required=True)
+parser.add_argument('--ratio', type=float, required=True)
+parser.add_argument('--repeat', type=int, required=True)
+args = parser.parse_args()
+try:
+    os.remove("task4.perf")
+except:
+    pass
+for testid in range(args.repeat):
+    # get the stdout of the following command     os.system(f"./test_insertion_trihash {args.seed} {args.insert}")
+    # and save it to a file named as testid
+    os.system(f"./test_eviction_trihash {args.seed} {args.ratio} >> task4.perf")
+F = open("task4.perf")
+# the file is like
+# 1357μs 772.716
+# 1360μs 771.012
+# 1356μs 773.286
+# 1361μs 770.445
+LINES = F.readlines()
+# get the first column as seconds
+column = [line.strip().split()[0] for line in LINES]
+# get the second column as memory
+column2 = [line.strip().split()[1] for line in LINES]
+
+print(*(column + column2))
+F.close()
