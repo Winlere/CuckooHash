@@ -35,7 +35,6 @@ int main(int argc, char const *argv[])
         if(percentageS > 0){
             tableSizeProportions.clear();
             tableSizeProportions.push_back(percentageS * 100);
-            assert(percentageS >= 1);
         }
         for (int proportion : tableSizeProportions)
         {
