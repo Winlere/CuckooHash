@@ -4,13 +4,15 @@
 #include <iostream>
 #include <vector>
 
-int main()
+int main(int argc, char const *argv[])
 {
+    uint32_t seed = argc >= 2 ? atoi(argv[1]) : 0;
+    double percentageS = argc >= 3 ? atof(argv[2]) : -1;
     TIME_INIT;
     const uint32_t maxTableSize = 1 << 25;
     const uint32_t testMaxSize = 1 << 24;
-    const uint32_t seed1 = 114514;
-    const uint32_t seed2 = 191981;
+    uint32_t seed1 = 114514 + seed;
+    uint32_t seed2 = 191981 + seed;
     const int range = 1 << 30;
     int retries = 0;
     hashTableEntry *d_hashTable = nullptr;
@@ -28,7 +30,13 @@ int main()
     {
 
         uint32_t testSize = testMaxSize;
+        
         std::vector<int> tableSizeProportions = {110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 101, 102, 105};
+        if(percentageS > 0){
+            tableSizeProportions.clear();
+            tableSizeProportions.push_back(percentageS * 100);
+            assert(percentageS >= 1);
+        }
         for (int proportion : tableSizeProportions)
         {
             uint32_t tableSize = testMaxSize * proportion / 100;
@@ -52,8 +60,10 @@ int main()
             bool valid = isArrayAllEqualToValue(d_retvals, (int)testMaxSize, 0);
             // bool valid = 1;
             cudaDeviceSynchronize();
-
-            std::cout << "tableSize,elapsed_μs,valid | " << tableSize << "," << elapsed_μs << "," << valid << std::endl;
+            if(tableSizeProportions.size() != 1)
+                std::cout << "tableSize,elapsed_μs,valid | " << tableSize << "," << elapsed_μs << "," << valid << std::endl;
+            else
+                std::cout << elapsed_μs / 1e6 << ' ' << 1.0 * (1<<24) / elapsed_μs << std::endl;
         }
     }
     cudaFree(d_keys);
