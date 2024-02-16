@@ -42,4 +42,28 @@ will execute the following tasks respectively:
 
 I run the benchmark on OS: Ubuntu 20.04.4 LTS x8664, with Intel Xeon Gold 6342 (96t/48c) @ 3.500GHz CPU. I ran my benchmark on NVIDIA RTX 3090.
 
-![alt text](doc/capacity.t2.png) ![alt text](doc/capacity.t3.png) ![alt text](doc/eviction.t3.png) ![alt text](doc/insert.t2.png) ![alt text](doc/insert.t3.png) ![alt text](doc/lookup.t2.png) ![alt text](doc/lookup.t3.png)
+mops means Million Operations per Second. One operation means one insertion or lookup.
+
+![alt text](doc/insert.t2.png) 
+> Fig 1. Insertsion test when _t=2_ (t is the number of hash function used)
+
+![alt text](doc/insert.t3.png) 
+
+> Fig 2. Insertsion test when _t=3_ (t is the number of hash function used)
+
+
+![alt text](doc/lookup.t2.png) 
+> Fig 3. Lookup test when _t=2_ (t is the number of hash function used) Red point is invalid because the table wasn't constructed successfully.
+
+![alt text](doc/lookup.t3.png)
+> Fig 4. Lookup test when _t=3_ (t is the number of hash function used) Red point is invalid because the table wasn't constructed successfully.
+
+
+![alt text](doc/capacity.t2.png) 
+> Fig 5. Capacity test when _t=3_ (t is the number of hash function used). 
+
+![alt text](doc/capacity.t3.png) 
+> Fig 6. Capacity test when _t=3_ (t is the number of hash function used). 
+
+![alt text](doc/eviction.t3.png)
+> Fig 7. Capacity test when _t=3_ (t is the number of hash function used). The result _t=2_ is meaningless because all is invalid accroding to the lookup tests.
