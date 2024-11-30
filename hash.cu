@@ -7,6 +7,8 @@
 #include <cstring>
 #include <map>
 #include "hash.cuh"
+#include <omp.h>
+
 #define MAX_MOVE_TIME 125
 #define NOT_A_KEY -1 // if change this, please change the memset value as well.
 #define NOT_A_INDEX -1
@@ -300,4 +302,44 @@ __global__ void generateRandomKeys(int *d_keys, int batchSize, int range, uint32
         return;
     HashFunc f{seed + tid, (uint32_t)range};
     d_keys[tid] = f(tid);
+}
+
+
+void lookupItemBatchStreamed(hashTableEntry *d_table, int *h_keys, int* h_retvals, int batchSize, int tableSize, HashFunc f1, HashFunc f2){
+    static const int streamCount = 1;
+    static const int tileSize = batchSize;
+    static const int BLOCKSIZE = 256;
+    // tileSize / BLOCKSIZE
+    cudaStream_t streams[streamCount];
+    int* d_keys_in_stream[streamCount];
+    int* d_retvals_in_stream[streamCount];
+    for(int i = 0; i < streamCount; ++i){
+        cudaStreamCreate(&streams[i]);
+        cudaMalloc(&d_keys_in_stream[i], sizeof(int)*tileSize);
+        cudaMalloc(&d_retvals_in_stream[i], sizeof(int)*tileSize);
+    }
+    omp_set_num_threads(streamCount);
+    int tileNum = (batchSize + tileSize - 1) / tileSize;
+    #pragma omp parallel for
+    for(int j = 0; j < tileNum; ++j){
+        int i = j * tileSize;
+        int stream_id = (i / tileSize) % streamCount;
+        int actualTileSize = std::min(tileSize, batchSize - i);
+        cudaStream_t this_stream = streams[stream_id];
+        int* d_keys_this_tile = d_keys_in_stream[stream_id];
+        int* d_retvals_this_tile = d_retvals_in_stream[stream_id];
+        int* h_keys_this_tile = h_keys + i;
+        int* h_retvals_this_tile = h_retvals + i;
+        cudaMemcpyAsync(d_keys_this_tile, h_keys_this_tile, actualTileSize * sizeof(int), 
+                    cudaMemcpyHostToDevice, this_stream);
+        lookupItemBatch<<<(actualTileSize + BLOCKSIZE - 1) / BLOCKSIZE, BLOCKSIZE, 0 ,this_stream>>>
+            (d_table, d_keys_this_tile, d_retvals_this_tile, tableSize, actualTileSize, f1, f2);
+        cudaMemcpyAsync(h_retvals_this_tile, d_retvals_this_tile, actualTileSize * sizeof(int), 
+                    cudaMemcpyDeviceToHost, this_stream);
+    }
+    for(int i = 0; i < streamCount; ++i){
+        cudaFree(&d_keys_in_stream[i]);
+        cudaFree(&d_retvals_in_stream[i]);
+    }
+    cudaDeviceSynchronize();
 }

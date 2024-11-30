@@ -5,10 +5,10 @@ NVCC = nvcc
 MAKE = make 
 
 # Compiler flags
-NVCCFLAGS = -g -G -Xcompiler -Wall -Xcompiler -fopenmp -O2
+NVCCFLAGS = -g -G -Xcompiler -Wall -Xcompiler -fopenmp -O2 -std=c++11
 
 # CUDA test files
-TEST_FILES = test_sanity.cu test_insertion.cu test_lookup.cu test_capacity.cu test_eviction.cu
+TEST_FILES = test_sanity.cu test_insertion.cu test_lookup.cu test_capacity.cu test_eviction.cu test_stream.cu
 
 # Other source files
 OTHER_CU_FILES = hash.cu
