@@ -39,8 +39,8 @@ int main(int argc, char const *argv[])
     {
         int testSize;
     retry:
-        f1 = {seed1 + retry_times, tableSize};
-        f2 = {seed2 + retry_times, tableSize};
+        f1 = HashFunc{seed1 + retry_times, tableSize};
+        f2 = HashFunc{seed2 + retry_times, tableSize};
         testSize = testMaxSize;
         reuseHashTable(d_hashTable, tableSize);
         TIME_START;
