@@ -16,6 +16,23 @@ class HashFunc
 public:
     uint32_t seed;
     uint32_t tableSize;
+    __host__ __device__ HashFunc(uint32_t seed_ = 0 , uint32_t tableSize_ = 1): 
+        seed(seed_), tableSize(tableSize_) {}
+    __host__ __device__ ~HashFunc(){};
+    __host__ __device__ HashFunc(const HashFunc& other):
+        seed(other.seed), tableSize(other.tableSize) {}
+    __host__ __device__ HashFunc(HashFunc && other) noexcept  :
+        seed(other.seed), tableSize(other.tableSize) {}
+    __host__ __device__ HashFunc& operator = (const HashFunc& other){
+        seed = other.seed;
+        tableSize = other.tableSize;
+        return *this;
+    }
+    __host__ __device__ HashFunc& operator = (HashFunc && other) noexcept {
+        seed = other.seed;
+        tableSize = other.tableSize;
+        return *this;
+    }
     /*https://github.com/easyaspi314/xxhash-clean/blob/86a04ab3f01277049a23f6c9e2c4a6c174ff50c4/xxhash32-ref.c#L97 */
     __host__ __device__ int operator()(int key)
     {
